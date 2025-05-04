@@ -1,6 +1,8 @@
-langchain
-langchain-community
-langchain-ollama
-langchain-huggingface
-chromadb
-sentence-transformers
+langchain==0.3.23
+langchain-community==0.0.20
+langchain-ollama==0.0.4
+langchain-huggingface==0.0.6
+chromadb==0.4.22
+sentence-transformers==2.2.2
+python-slugify==8.0.1
+rapidfuzz==3.5.2

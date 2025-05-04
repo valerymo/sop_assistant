@@ -1,3 +1,56 @@
-# .gitignore
 sops/
+# Byte-compiled / cache
+utils/__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+.env/
+.venv/
+env/
+venv/
+ENV/
+
+# VS Code settings
+.vscode/
+
+# Jupyter notebooks checkpoint files
+.ipynb_checkpoints/
+
+# Logs and system files
+*.log
+.DS_Store
+Thumbs.db
+
+# LangChain or Chroma cache (optional)
+chroma_db/
+index/
+db/
+
+# Python-specific
+*.egg
+*.egg-info/
+dist/
+build/
+pip-wheel-metadata/
+
+# Pytest
+.cache/
+.pytest_cache/
+
+# Local-only Git settings
+.git/info/exclude
+
+# Test coverage
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+
+# IDEs
+.idea/
+*.iml
+
+# Optional: HuggingFace transformers cache
+~/.cache/huggingface/
 

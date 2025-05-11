@@ -6,7 +6,7 @@ from langchain.chains import RetrievalQA
 from langchain_ollama import OllamaLLM
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from case_submission import handle_new_case_submission
+from case_submission import handle_new_case_submission_cli
 
 
 # Load and prepare documents
@@ -37,7 +37,7 @@ while True:
 
     if query.lower() == "add case":
         # Prompt to add a new case
-        handle_new_case_submission(db)
+        handle_new_case_submission_cli(db)
         continue  # Skip the rest of the loop to let user enter the next input
 
 

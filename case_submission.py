@@ -19,8 +19,8 @@ def add_single_file_to_db(filepath, db):
     db.add_documents(chunks)
     print(f"✅ New document embedded and added to vector DB: {filepath}")
 
-def handle_new_case_submission(db):
-    """Collect a new case, save it as a .txt file, and add it to the live vector DB."""
+def handle_new_case_submission_cli(db):
+    """Handles case submission via command-line."""
     print("\n🆕 You are adding a new issue/solution to the assistant.")
 
     # Step 1: Get Summary first
@@ -33,6 +33,7 @@ def handle_new_case_submission(db):
     suggested_name = slugify(summary)
     print(f"💡 Suggested file name: {suggested_name}.txt")
     filename = input("✏️ Enter a file name (or press Enter to accept suggestion): ").strip()
+
     if not filename:
         filename = suggested_name
 
@@ -72,3 +73,4 @@ def handle_new_case_submission(db):
         return
 
     # Step 6: Add document to live vector DB
+    add_single_file_to_db(filepath, db)

@@ -20,6 +20,7 @@ A planned feature will also enable automatic creation of Jira tasks to review wh
 - **Hugging Face Embeddings** – For generating semantic embeddings.
 - **Chroma** – Fast and lightweight local vector database.
 - **Python 3.8+**
+- **Streamlit** - UI
 
 
 ---
@@ -49,7 +50,8 @@ ollama run mistral
 5. Add SOP documents to the ./sops directory (.asceedic, .md, .txt)
 
 ## Usage
-- To start the assistant:
+### CLI
+- To start the assistant from command line (CLI):
 ```bash
 python main.py
 ```
@@ -71,6 +73,12 @@ You can now:
 - Type `add case` to submit a new scenario.
 - Type `exit` to quit.
 
+### Streamlit UI
+
+```shell
+streamlit run app.py
+```
+**Note**.The `add case` feature is currently under development for the UI. However, it is available through the CLI for use.
 
 ## Example Queries
 
@@ -82,7 +90,7 @@ You can now:
 ```
 
 ## TODOs
- - Add a web-based chat UI
+ - Implement "Add Case" feature in the UI
  - Enable automatic embedding refresh on new files
  - Add a feature to automatically create Jira tasks to review whether newly submitted information should be promoted to official SOPs 
  - Improve AI responses by using predefined templates for document retrieval

@@ -1,88 +1,95 @@
 import os
+import streamlit as st
 from slugify import slugify
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import streamlit as st
-import logging
 
-# Directory where new SOP case files are stored
-# SOP_DIR = "./sops"
+# Set up SOP directory
 SOP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sops")
+os.makedirs(SOP_DIR, exist_ok=True)
 
-# Reuse same splitter settings as main RAG logic
-splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
-
-def add_single_file_to_db(filepath, db):
-    """Reads a new file, splits it, and adds it to the existing vector DB."""
-    with open(filepath, 'r') as f:
-        content = f.read()
-
-    doc = Document(page_content=content, metadata={"source": filepath})
-    chunks = splitter.split_documents([doc])
-    db.add_documents(chunks)
-    st.success(f"✅ New document added to the vector DB: {filepath}")
-
-
-def handle_new_case_submission_ui(db):
-    logging.basicConfig(level=logging.DEBUG,  # Set logging level (DEBUG, INFO, etc.)
-                        format="%(asctime)s - %(levelname)s - %(message)s")  # Log format
-
-    logging.debug("Starting new case submission process")
+# Function to handle new case submission UI
+def show_add_case_form(db):
     st.subheader("📥 Submit a New SOP Case")
 
-    # Option to return to the main screen
-    if st.button("❌ Cancel / Return to Main Screen"):
+    # Cancel button to exit form (with a unique key)
+    if st.button("❌ Cancel / Return to Main Screen", key="cancel_button"):
         st.session_state["show_add_case"] = False
         st.experimental_rerun()
-        return  # Exit the function early if Cancel is pressed
+        return
 
-    # Form for submitting new case
-    with st.form("case_submission_form", clear_on_submit=True):
-        summary = st.text_input("📌 Summary of the issue")
-        suggested_name = slugify(summary) if summary else ""
-        filename_input = st.text_input("✏️ Optional filename (blank = auto from summary)", value=suggested_name)
-        resolution = st.text_area("🛠️ Resolution steps")
-        related_input = st.text_input("🔗 Related SOPs (comma-separated, optional)")
+    # Begin the form block
+    #with st.form(key="add_case_form"):
+    with st.form("add_case_form"):
+        summary = st.text_input("📌 Summary of the issue", value=st.session_state.get("summary", ""))
 
-        submitted = st.form_submit_button("✅ Submit")
+        filename_input = st.text_input(
+            "📄 Filename (required)",
+            value=st.session_state.get("filename_input", ""),
+        )
 
-        # Check if the form is submitted
+        resolution = st.text_area("🛠️ Resolution steps", value=st.session_state.get("resolution", ""))
+        related = st.text_input("🔗 Related SOPs (comma-separated, optional)", value=st.session_state.get("related", ""))
+
+        submitted = st.form_submit_button("✅ Submit Case")
+
         if submitted:
-            # Ensure summary is not empty
-            if not summary:
-                st.warning("⚠️ Summary is required. Please enter a summary.")
-                return  # Do not continue if summary is empty
+            # Store back into session_state
+            st.session_state.summary = summary
+            st.session_state.filename_input = filename_input
+            st.session_state.resolution = resolution
+            st.session_state.related = related
 
-            # Ensure filename is not empty
-            if not filename_input:
-                st.warning("⚠️ File name is required. Please enter a file name.")
-                return  # Do not continue if file name is empty
+            # if not summary:
+            #     st.warning("⚠️ Summary is required.")
+            #     return
 
-            # Generate filename if not entered manually
+
+            # Prepare the filename and path
             filename = filename_input.strip() or slugify(summary)
             filepath = os.path.join(SOP_DIR, f"{filename}.txt")
 
-            # Prevent overwriting existing file
+            # Check if file already exists
             if os.path.exists(filepath):
                 st.warning(f"⚠️ File '{filename}.txt' already exists.")
                 return
 
-            # Collect related SOPs if any
-            related_sops = [s.strip() for s in related_input.split(",") if s.strip()]
+            # Create the content to save to the file
+            content = f"Summary:\n{summary}\n\nResolution:\n{resolution}"
+            if related:
+                content += f"\n\nRelated SOPs: {related}"
 
-            # Create content lines for the new case file
-            content_lines = [
-                f"Summary:\n{summary}",
-                f"\nResolution:\n{resolution}"
-            ]
-            if related_sops:
-                content_lines.append(f"\nRelated SOPs: {', '.join(related_sops)}")
-
+            # Try saving the case to the file
             try:
-                # Save the new case to a file
-                with open(filepath, "w") as f:
-                    f.write("\n".join(content_lines))
-                st.success(f"📁 Case saved to: {filepath}")
-                add_single_file_to_db(filepath, db)
+                with open(filepath, 'w') as f:
+                    f.write(content)
+                st.success(f"✅ Case saved to: {filepath}")
+
+                # Add to vector DB (optional, if `db` is provided)
+                doc = Document(page_content=content, metadata={"source": filepath})
+                splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+                db.add_documents(splitter.split_documents([doc]))
+                st.success("✅ Document added to the vector DB.")
+
+                # Hide form after submission
+                st.session_state["show_add_case"] = False
+                st.rerun()
+
+                # Optionally, reset the session state fields to clear the form
+                st.session_state.summary = ""
+                st.session_state.filename_input = ""
+                st.session_state.resolution = ""
+                st.session_state.related = ""
+
             except Exception as e:
                 st.error(f"❌ Could not save file: {e}")
+
+# Example of how to trigger the form (outside of the function)
+if "show_add_case" not in st.session_state:
+    st.session_state["show_add_case"] = False
+
+if st.button("➕ Add New Case", key="add_new_case_button"):
+    st.session_state["show_add_case"] = True
+
+if st.session_state["show_add_case"]:
+    show_add_case_form(db)

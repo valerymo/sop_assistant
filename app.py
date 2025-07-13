@@ -5,7 +5,7 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain_ollama import OllamaLLM
-from case_submission_ui import handle_new_case_submission_ui
+from case_submission_ui import show_add_case_form
 
 # Initialize once
 @st.cache_resource
@@ -37,6 +37,12 @@ if st.button("Ask"):
         for doc in result["source_documents"]:
             st.markdown(f"- `{doc.metadata.get('source')}`")
 
+# if st.button("➕ Add New Case"):
+#show_add_case_form(db)
+
 if st.button("➕ Add New Case"):
-    handle_new_case_submission_ui(db)
+    st.session_state["show_add_case"] = True
+
+if st.session_state.get("show_add_case", False):
+    show_add_case_form(db)
 

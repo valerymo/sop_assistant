@@ -74,11 +74,18 @@ You can now:
 - Type `exit` to quit.
 
 ### Streamlit UI
+- To launch the assistant in UI mode, run::
 
 ```shell
 streamlit run app.py
 ```
-**Note**.The `add case` feature is currently under development for the UI. However, it is available through the CLI for use.
+This will start a web-based interface where you can interact with the SOP Assistant — including adding new cases to extend the knowledge base.
+
+
+![Screenshot](images/Screenshot1.png)
+
+![Screenshot](images/Screenshot2.png)
+
 
 ## Example Queries
 
@@ -90,7 +97,7 @@ streamlit run app.py
 ```
 
 ## TODOs
- - Implement "Add Case" feature in the UI
  - Enable automatic embedding refresh on new files
  - Add a feature to automatically create Jira tasks to review whether newly submitted information should be promoted to official SOPs 
  - Improve AI responses by using predefined templates for document retrieval
+ - Improve UI

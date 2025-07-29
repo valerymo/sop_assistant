@@ -101,3 +101,12 @@ This will start a web-based interface where you can interact with the SOP Assist
  - Add a feature to automatically create Jira tasks to review whether newly submitted information should be promoted to official SOPs 
  - Improve AI responses by using predefined templates for document retrieval
  - Improve UI
+
+## Ideas for Future Expansion
+ - Add web lookup functionality  
+   To assist with troubleshooting steps not covered by internal SOPs, and to help verify whether documentation is current and aligned with best practices.
+ - Extend the local tool into a web service  
+   Converting the tool into a web-based service would eliminate the need for local setup, making it easily accessible for different SRE teams in the Company.
+ - Introduce MCP for modularity and extensibility  
+   Implementing the MCP would allow the assistant to connect with external tools in a standardized way. This would make it easier to add new capabilities and integrate with other AI agents or systems in the future.
+

@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sop-assistant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sop-assistant
+  template:
+    metadata:
+      labels:
+        app: sop-assistant
+    spec:
+      containers:
+      - name: sop-assistant
+        image: quay.io/vmogilev_rhmi/sop-assistant:latest
+        ports:
+        - containerPort: 8501

@@ -7,3 +7,5 @@ sentence-transformers==5.0.0
 python-slugify==8.0.1
 rapidfuzz==3.5.2
 streamlit==1.22.0
+fastapi
+uvicorn

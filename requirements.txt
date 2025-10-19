@@ -1,9 +1,18 @@
+# --- Core LangChain components ---
 langchain==0.3.26
 langchain-community==0.3.27
 langchain-ollama==0.3.4
-langchain-huggingface==0.3.0
-chromadb==1.0.15
-sentence-transformers==5.0.0
+
+# --- Vector store and embeddings ---
+faiss-cpu==1.11.0.post1
+fastembed>=0.3.0
+
+# Explicit onnxruntime version to satisfy fastembed’s dependency:
+onnxruntime>=1.17.0,<1.20.0
+
+# --- Text utilities ---
 python-slugify==8.0.1
 rapidfuzz==3.5.2
+
+# --- Web UI ---
 streamlit==1.22.0

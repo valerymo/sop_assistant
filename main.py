@@ -1,10 +1,10 @@
 from utils.loaders import load_sop_files
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import FastEmbedEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain_ollama import OllamaLLM
-from langchain_huggingface import HuggingFaceEmbeddings
+ 
 
 from case_submission import handle_new_case_submission_cli
 
@@ -17,8 +17,8 @@ splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
 chunks = splitter.split_documents(docs)
 
 print("🧠 Creating vector database...")
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-db = Chroma.from_documents(chunks, embeddings)
+embeddings = FastEmbedEmbeddings()
+db = FAISS.from_documents(chunks, embeddings)
 
 retriever = db.as_retriever()
 llm = OllamaLLM(model="mistral")

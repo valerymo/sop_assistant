@@ -1,8 +1,8 @@
 import streamlit as st
 from utils.loaders import load_sop_files
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import FastEmbedEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain_ollama import OllamaLLM
 from case_submission_ui import show_add_case_form
@@ -13,8 +13,8 @@ def setup_qa_system():
     docs = load_sop_files("./sops")
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     chunks = splitter.split_documents(docs)
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    db = Chroma.from_documents(chunks, embeddings)
+    embeddings = FastEmbedEmbeddings()
+    db = FAISS.from_documents(chunks, embeddings)
     retriever = db.as_retriever()
     llm = OllamaLLM(model="mistral")
     qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever, return_source_documents=True)

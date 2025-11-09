@@ -1,0 +1,18 @@
+
+internal_sources:
+  - name: your-repo-name
+    path: ./sops/your-repo-name
+    repo: https://github.com//your-repos/your-repo-name
+
+  - name: my
+    repo: # left blank → purely local, no git
+    path: ./sops/my
+
+external_sources:
+  - name: general-search
+    engine: gemini
+    api_key: ${GEMINI_API_KEY}
+
+  - name: stack-overflow
+    engine: serpapi
+    api_key: ${SERPAPI_KEY}

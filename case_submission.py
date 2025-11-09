@@ -4,7 +4,8 @@ from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Directory where new SOP case files are stored
-SOP_DIR = "./sops"
+NEW_SOPS_DIR = "./sops/new-draft"
+os.makedirs(NEW_SOPS_DIR, exist_ok=True)
 
 # Reuse same splitter settings as main RAG logic
 splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
@@ -37,7 +38,7 @@ def handle_new_case_submission_cli(db):
     if not filename:
         filename = suggested_name
 
-    filepath = os.path.join(SOP_DIR, f"{filename}.txt")
+    filepath = os.path.join(NEW_SOPS_DIR, f"{filename}.txt")
     if os.path.exists(filepath):
         print(f"⚠️ File '{filepath}' already exists. Please choose a different name.")
         return

@@ -5,8 +5,8 @@ from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Set up SOP directory
-SOP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sops")
-os.makedirs(SOP_DIR, exist_ok=True)
+NEW_SOPS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sops/new-draft")
+os.makedirs(NEW_SOPS_DIR, exist_ok=True)
 
 # Function to handle new case submission UI
 def show_add_case_form(db):
@@ -47,7 +47,7 @@ def show_add_case_form(db):
 
             # Prepare the filename and path
             filename = filename_input.strip() or slugify(summary)
-            filepath = os.path.join(SOP_DIR, f"{filename}.txt")
+            filepath = os.path.join(NEW_SOPS_DIR, f"{filename}.txt")
 
             # Check if file already exists
             if os.path.exists(filepath):

@@ -11,6 +11,7 @@ A planned feature will also enable automatic creation of Jira tasks to review wh
 - Responds to natural language questions using a local LLM (Mistral via Ollama)
 - Supports adding new alert cases and operational solutions 
 - Maintains a growing knowledge base that can be queried and reused over time
+- **Experimental:** Hybrid and External modes allow combining internal SOPs with web search or querying external sources only (CLI only, under development)
 ---
 
 ## Tech Stack
@@ -61,8 +62,11 @@ python main.py
 Loading SOP documents...
 100%|██████████████████████████████████████████████████████████████████████| 60/60 [00:00<00:00, 11886.37it/s]
 🧠 Creating vector database...
+✅ Loaded 2 AWS documentation URLs.
 🤖 SOP Assistant ready. Type your question below.
    Type 'add case' to add a new issue/solution.
+   Type 'mode' to switch between RAG / Hybrid / External.
+   Type 'help' for commands.
    Type 'exit' to quit.
 
 📝 You: 
@@ -71,6 +75,8 @@ Loading SOP documents...
 You can now:
 - Ask any SOP-related question.
 - Type `add case` to submit a new scenario.
+- Type `mode` to switch between RAG / Hybrid / External.
+- Type `help` for commands.
 - Type `exit` to quit.
 
 ### Streamlit UI

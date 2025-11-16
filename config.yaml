@@ -1,11 +1,10 @@
-
 internal_sources:
-  - name: your-repo-name
-    path: ./sops/your-repo-name
-    repo: https://github.com//your-repos/your-repo-name
+  # - name: your-repo-name
+  #   path: ./sops/your-repo-name
+  #   repo: https://github.com/your-repos/your-repo-name
 
   - name: my
-    repo: # left blank → purely local, no git
+    repo: null      # purely local, no git
     path: ./sops/my
 
 external_sources:
@@ -16,3 +15,12 @@ external_sources:
   - name: stack-overflow
     engine: serpapi
     api_key: ${SERPAPI_KEY}
+
+  - aws_docs:
+#      - "https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/WhatIs.html"
+#      - "https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/RedisOverview.html"
+#      - "https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/CacheMetrics.html"
+      - "https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/CacheNodes.Memory.html"
+      - "https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/troubleshooting-high-memory-usage.html"
+#      - "https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/metrics-redis.html"
+

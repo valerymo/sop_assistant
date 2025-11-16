@@ -3,6 +3,7 @@ langchain==0.3.26
 langchain-community==0.3.27
 langchain-ollama==0.3.4
 
+
 # --- Vector store and embeddings ---
 faiss-cpu==1.11.0.post1
 fastembed>=0.3.0
@@ -19,3 +20,10 @@ streamlit==1.22.0
 
 # --- Config / YAML ---
 pyyaml>=6.0
+
+# --- For Hibrid mode: RAG + Web search ---
+trafilatura>=1.7.0
+lxml
+courlan
+hsh
+beautifulsoup4>=4.12.0

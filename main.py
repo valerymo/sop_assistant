@@ -79,6 +79,12 @@ while True:
                 continue
             try:
                 assistant.set_mode(new_mode)
+
+                # --- External mode URL choice ---
+                if new_mode.lower() == "external":
+                    answer = input("Do you want to include configured URLs in the search? [yes]/no: ").strip().lower()
+                    assistant.use_config_urls = (answer != "no")
+
                 break
             except ValueError as e:
                 print(f"⚠ {e}")

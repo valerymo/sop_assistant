@@ -12,6 +12,7 @@ A planned feature will also enable automatic creation of Jira tasks to review wh
 - Supports adding new alert cases and operational solutions 
 - Maintains a growing knowledge base that can be queried and reused over time
 - **Experimental:** Hybrid and External modes allow combining internal SOPs with web search or querying external sources only (CLI only, under development)
+- Modular architecture following MCP principles, allowing easy addition of new engines or capabilities.
 ---
 
 ## Tech Stack
@@ -66,6 +67,7 @@ Loading SOP documents...
 🤖 SOP Assistant ready. Type your question below.
    Type 'add case' to add a new issue/solution.
    Type 'mode' to switch between RAG / Hybrid / External.
+   Type 'engine' to switch external engine (Gemini / SerpAPI / Ollama).
    Type 'help' for commands.
    Type 'exit' to quit.
 
@@ -76,6 +78,9 @@ You can now:
 - Ask any SOP-related question.
 - Type `add case` to submit a new scenario.
 - Type `mode` to switch between RAG / Hybrid / External.
+  - If you select External, you will be prompted:
+    "Do you want to include configured URLs in the search? [yes]/no"
+- Type engine to switch between external engines (Gemini, SerpAPI, Ollama).
 - Type `help` for commands.
 - Type `exit` to quit.
 
@@ -107,12 +112,20 @@ This will start a web-based interface where you can interact with the SOP Assist
  - Add a feature to automatically create Jira tasks to review whether newly submitted information should be promoted to official SOPs 
  - Improve AI responses by using predefined templates for document retrieval
  - Improve UI
+ - Implement all modes (RAG / Hybrid / External) in the Streamlit UI
 
-## Ideas for Future Expansion
- - Add web lookup functionality  
-   To assist with troubleshooting steps not covered by internal SOPs, and to help verify whether documentation is current and aligned with best practices.
- - Extend the local tool into a web service  
-   Converting the tool into a web-based service would eliminate the need for local setup, making it easily accessible for different SRE teams in the Company.
- - Introduce MCP for modularity and extensibility  
-   Implementing the MCP would allow the assistant to connect with external tools in a standardized way. This would make it easier to add new capabilities and integrate with other AI agents or systems in the future.
+## Future Ideas
+ - Web lookup expansion: Extend External mode to query the latest AWS/GCP docs dynamically.
+ - Full web-based service: Eliminate local setup; accessible to multiple SRE teams.
+ - Continue following MCP principles for modularity and extensibility: The assistant’s design already aligns with MCP principles, 
+and future expansions will maintain this approach, making it easier to integrate new external engines or AI agents.
 
+## Architecture Overview
+
+The SOP Assistant follows MCP principles, ensuring that internal SOP retrieval, external engines, and the assistant core are modular, decoupled, and extensible.
+This diagram illustrates how:
+  - Internal SOPs are indexed and retrieved via a vector database
+  - External engines (Gemini, Ollama, SerpAPI, etc.) are plug-and-play modules
+  - The HybridSOPAssistant orchestrates queries and supports multiple modes (RAG, Hybrid, External) without tight coupling
+
+![img.png](img.png)

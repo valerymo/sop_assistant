@@ -31,7 +31,7 @@ class HybridSOPAssistant:
     SOP Assistant supporting three modes:
     1. RAG (internal SOPs only)
     2. Hybrid (internal SOPs + external web)
-    3. External (external web only)
+    3. External (external web only, dynamic search + optional config URLs)
     """
 
     def __init__(self, db: FAISS, engines_config: dict, mode: str = "rag"):
@@ -46,24 +46,19 @@ class HybridSOPAssistant:
         self.current_engine: BaseEngine = None
         self._init_engines()
 
-        # Setup QA with default LLM engine (Ollama)
-        default_llm_engine = (
-            self.current_engine
-            if isinstance(self.current_engine, OllamaEngine)
-            else OllamaEngine(name="default_ollama")
-        )
+        # Setup QA with default LLM (internal RAG)
+        default_llm_engine = self.engine_instances.get("ollama") or OllamaEngine(name="default_ollama")
         self.qa = RetrievalQA.from_chain_type(
             llm=default_llm_engine.llm,
             retriever=self.retriever,
             return_source_documents=True
         )
 
-        # Collect AWS doc URLs
-        self.aws_doc_urls = []
+        # Collect AWS/GCP doc URLs from config
+        self.external_config_urls: list[str] = []
         for src in engines_config.get("external_sources", []):
-            aws_urls = src.get("aws_docs", [])
-            if aws_urls:
-                self.aws_doc_urls.extend(aws_urls)
+            urls = src.get("urls") or []
+            self.external_config_urls.extend(urls)
 
     def _init_engines(self):
         """Initialize external engines from config."""
@@ -83,6 +78,7 @@ class HybridSOPAssistant:
         if self.engine_instances:
             self.current_engine = next(iter(self.engine_instances.values()))
         else:
+            # fallback
             self.current_engine = OllamaEngine(name="default_ollama")
 
     def set_engine(self, name: str):
@@ -101,63 +97,62 @@ class HybridSOPAssistant:
         result_text = ""
         sources = []
 
-        seen_sources = set()  # Keep track of added sources to avoid duplicates
-
         # --- Internal RAG search ---
         if self.mode in ("rag", "hybrid"):
             qa_result = self.qa.invoke({"query": user_query})
             result_text += qa_result["result"]
-
-            for doc in qa_result["source_documents"]:
-                src_path = doc.metadata.get("source")
-                if src_path not in seen_sources:
-                    sources.append({"source": src_path, "type": "internal"})
-                    seen_sources.add(src_path)
+            sources.extend(
+                {"source": doc.metadata.get("source"), "type": "internal"}
+                for doc in qa_result["source_documents"]
+            )
 
         # --- External / Hybrid search ---
         if self.mode in ("hybrid", "external"):
-            web_texts = self._fetch_external_texts(user_query)
-            for wt in web_texts:
-                url = wt["url"]
-                if url not in seen_sources:
-                    sources.append({"source": url, "type": "external"})
-                    seen_sources.add(url)
-
+            web_texts = self._fetch_external_texts(user_query, external_only=self.mode=="external")
             if web_texts:
+                for wt in web_texts:
+                    sources.append({"source": wt["url"], "type": "external"})
+
                 combined_text = "\n\n".join(wt["text"] for wt in web_texts)
-                result_text += "\n\n" + self.current_engine.invoke(combined_text)
+                if self.mode == "external" or web_texts:
+                    result_text += "\n\n" + self.current_engine.invoke(combined_text)
+
+        # Deduplicate sources
+        seen = set()
+        cleaned_sources = []
+        for s in sources:
+            key = f"{s['type']}|{s['source']}"
+            if key not in seen:
+                cleaned_sources.append(s)
+                seen.add(key)
+        sources = cleaned_sources
 
         return {"result": result_text, "sources": sources}
 
-
-    def _fetch_external_texts(self, query: str) -> list[dict[str, str]]:
+    def _fetch_external_texts(self, query: str, external_only: bool = False) -> list[dict]:
+        """
+        Fetch text from external sources:
+        - If external_only=True: ignore internal URLs, only dynamic search
+        - Else: use config URLs + dynamic search
+        """
         results = []
 
-        # --- AWS docs ---
-        for url in self.aws_doc_urls:
-            text = self.web_retriever.fetch_text(url)
-            if text:
-                results.append({"url": url, "text": text})
-
-        # --- Other configured engines ---
-        for src in self.engines_config.get("external_sources", []):
-            engine_name = src.get("name")
-            urls = src.get("urls", [])
-
-            # Fetch URLs for this engine
-            for url in urls:
+        # Use config URLs unless in pure external mode
+        if not external_only and self.external_config_urls:
+            for url in self.external_config_urls:
                 text = self.web_retriever.fetch_text(url)
                 if text:
                     results.append({"url": url, "text": text})
 
-            # If no URLs, maybe generate dynamic search URLs depending on engine
-            if not urls:
-                if engine_name.lower() == "general-search":
-                    wiki_url = f"https://en.wikipedia.org/wiki/{quote_plus(query).replace('+','_')}"
-                    so_url = f"https://stackoverflow.com/search?q={quote_plus(query)}"
-                    for url in [wiki_url, so_url]:
-                        text = self.web_retriever.fetch_text(url)
-                        if text:
-                            results.append({"url": url, "text": text})
+        # Dynamic search URLs (Wikipedia, StackOverflow, AWS/GCP docs)
+        dynamic_urls = [
+            f"https://en.wikipedia.org/wiki/{quote_plus(query).replace('+','_')}",
+            f"https://stackoverflow.com/search?q={quote_plus(query)}"
+        ]
+        # Add more dynamic doc URLs if needed, e.g., AWS/GCP RDS or Redis docs
+        for url in dynamic_urls:
+            text = self.web_retriever.fetch_text(url)
+            if text:
+                results.append({"url": url, "text": text})
 
         return results

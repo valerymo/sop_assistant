@@ -1,26 +1,19 @@
 internal_sources:
-  # - name: your-repo-name
-  #   path: ./sops/your-repo-name
-  #   repo: https://github.com/your-repos/your-repo-name
-
   - name: my
-    repo: null      # purely local, no git
+    repo: null
     path: ./sops/my
 
 external_sources:
   - name: general-search
     engine: gemini
     api_key: ${GEMINI_API_KEY}
+    urls:  # optional URLs for this engine
+      - "https://en.wikipedia.org/wiki/Python_(programming_language)"
+      - "https://stackoverflow.com/questions/tagged/python"
 
-  - name: stack-overflow
-    engine: serpapi
-    api_key: ${SERPAPI_KEY}
-
-  - aws_docs:
-#      - "https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/WhatIs.html"
-#      - "https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/RedisOverview.html"
-#      - "https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/CacheMetrics.html"
+  - name: aws-docs
+    engine: gemini
+    api_key: ${GEMINI_API_KEY}
+    urls:
       - "https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/CacheNodes.Memory.html"
       - "https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/troubleshooting-high-memory-usage.html"
-#      - "https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/metrics-redis.html"
-

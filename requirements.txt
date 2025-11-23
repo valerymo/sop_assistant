@@ -1,15 +1,12 @@
 # --- Core LangChain components ---
 langchain==0.3.26
 langchain-community==0.3.27
-langchain-ollama==0.3.4
-
+langchain-ollama==0.3.4   # Ollama LLM wrapper
 
 # --- Vector store and embeddings ---
 faiss-cpu==1.11.0.post1
 fastembed>=0.3.0
-
-# Explicit onnxruntime version to satisfy fastembed’s dependency:
-onnxruntime>=1.17.0
+onnxruntime>=1.17.0        # required by fastembed
 
 # --- Text utilities ---
 python-slugify==8.0.1
@@ -21,9 +18,14 @@ streamlit==1.22.0
 # --- Config / YAML ---
 pyyaml>=6.0
 
-# --- For Hibrid mode: RAG + Web search ---
+# --- For Hybrid mode: RAG + Web search ---
 trafilatura>=1.7.0
 lxml
-courlan
-hsh
 beautifulsoup4>=4.12.0
+requests>=2.31.0
+urllib3>=2.0.0
+
+# --- Optional: SerpAPI / Gemini engine dependencies ---
+# Only needed if you plan to use these external engines
+#serpapi>=1.0.0
+#geminiapi>=0.0.8        # or the official client you use for Gemini

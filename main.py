@@ -34,31 +34,9 @@ embeddings = FastEmbedEmbeddings()
 db = FAISS.from_documents(chunks, embeddings)
 
 # ------------------------------
-# Extract AWS URLs from config
+# Initialize Assistant
 # ------------------------------
-aws_doc_urls = []
-external_sources = config.get("external_sources", [])
-
-for source in external_sources:
-    if "aws_docs" in source:
-        urls = source["aws_docs"]
-        if isinstance(urls, list):
-            aws_doc_urls.extend(urls)
-
-if not aws_doc_urls:
-    print("⚠️ No AWS doc URLs found in config.yaml. Web search will skip AWS docs.")
-else:
-    print(f"✅ Loaded {len(aws_doc_urls)} AWS documentation URLs.")
-
-# ------------------------------
-# Initialize Assistant (RAG default)
-# ------------------------------
-assistant = HybridSOPAssistant(
-    db=db,
-    model_name="mistral",
-    mode="rag",            # default mode
-    aws_doc_urls=aws_doc_urls
-)
+assistant = HybridSOPAssistant(db=db, engines_config=config)
 
 # ------------------------------
 # Chat loop
@@ -66,15 +44,14 @@ assistant = HybridSOPAssistant(
 print("🤖 SOP Assistant ready. Type your question below.")
 print("   Type 'add case' to add a new issue/solution.")
 print("   Type 'mode' to switch between RAG / Hybrid / External.")
+print("   Type 'engine' to switch external engine (Gemini / SerpAPI / Ollama).")
 print("   Type 'help' for commands.")
 print("   Type 'exit' to quit.")
 
 while True:
     user_input = input("\n📝 You: ").strip()
-
     if not user_input:
         continue
-
     cmd = user_input.lower()
 
     if cmd in ("exit", "quit"):
@@ -86,6 +63,7 @@ while True:
         print("   - Type your question to get an answer")
         print("   - 'add case' to add a new issue/solution")
         print("   - 'mode' to switch between RAG / Hybrid / External")
+        print("   - 'engine' to switch external engine")
         print("   - 'exit' to quit")
         continue
 
@@ -94,11 +72,10 @@ while True:
         continue
 
     if cmd == "mode":
-        # Mode switching loop
         while True:
             new_mode = input("Enter mode (RAG / Hybrid / External): ").strip()
             if not new_mode:
-                print("⚠ Mode cannot be empty. Please enter RAG, Hybrid, or External.")
+                print("⚠ Mode cannot be empty.")
                 continue
             try:
                 assistant.set_mode(new_mode)
@@ -107,19 +84,28 @@ while True:
                 print(f"⚠ {e}")
         continue
 
-    # ------------------------------
+    if cmd == "engine":
+        engine_names = list(assistant.engine_instances.keys())
+        if not engine_names:
+            print("⚠ No external engines configured.")
+            continue
+        print("Available engines:", ", ".join(engine_names))
+        new_engine = input("Enter engine name: ").strip()
+        if new_engine:
+            try:
+                assistant.set_engine(new_engine)
+            except ValueError as e:
+                print(f"⚠ {e}")
+        continue
+
     # Query the assistant
-    # ------------------------------
     try:
         result = assistant.query(user_input)
     except Exception as e:
         print(f"⚠ Error during query: {e}")
         continue
 
-    # Display answer
     print("\n🤖 Assistant:\n", result.get("result", ""))
-
-    # Display sources
     sources = result.get("sources", [])
     if sources:
         print("\n📎 Sources:")

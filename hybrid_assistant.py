@@ -1,12 +1,14 @@
 # hybrid_assistant.py
 import requests
-from langchain.chains import RetrievalQA
-from langchain_ollama import OllamaLLM
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import FastEmbedEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-import trafilatura
 from urllib.parse import quote_plus
+import trafilatura
+from langchain.chains import RetrievalQA
+from langchain_community.vectorstores import FAISS
+
+from engines.base import BaseEngine
+from engines.ollama_engine import OllamaEngine
+from engines.gemini_engine import GeminiEngine
+from engines.serpapi_engine import SerpAPIEngine
 
 
 class ExternalWebRetriever:
@@ -14,21 +16,11 @@ class ExternalWebRetriever:
 
     def fetch_text(self, url: str) -> str | None:
         try:
-            # FIX 1: Add real browser user-agent → Wikipedia no longer blocks (403 gone)
-            headers = {
-                "User-Agent": (
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0 Safari/537.36"
-                )
-            }
-
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-
-            text = trafilatura.extract(response.text)
+            headers = {"User-Agent": "Mozilla/5.0"}
+            resp = requests.get(url, headers=headers, timeout=10)
+            resp.raise_for_status()
+            text = trafilatura.extract(resp.text)
             return text if text else None
-
         except Exception as e:
             print(f"⚠ Web retrieval failed for {url}: {e}")
             return None
@@ -36,109 +28,136 @@ class ExternalWebRetriever:
 
 class HybridSOPAssistant:
     """
-    SOP Assistant with three modes:
-    1. RAG only (internal SOPs + local LLM)
-    2. Hybrid (internal SOPs + web search + local LLM)
-    3. External (web search only + local LLM)
+    SOP Assistant supporting three modes:
+    1. RAG (internal SOPs only)
+    2. Hybrid (internal SOPs + external web)
+    3. External (external web only)
     """
 
-    def __init__(
-        self,
-        db: FAISS,
-        model_name: str = "mistral",
-        mode: str = "RAG",
-        aws_doc_urls: list[str] | None = None,
-    ):
+    def __init__(self, db: FAISS, engines_config: dict, mode: str = "rag"):
         self.db = db
-        self.llm = OllamaLLM(model=model_name)
         self.retriever = db.as_retriever(search_kwargs={"k": 10})
+        self.web_retriever = ExternalWebRetriever()
+        self.mode = mode.lower()
+        self.engines_config = engines_config
+
+        # Initialize engine instances
+        self.engine_instances: dict[str, BaseEngine] = {}
+        self.current_engine: BaseEngine = None
+        self._init_engines()
+
+        # Setup QA with default LLM engine (Ollama)
+        default_llm_engine = (
+            self.current_engine
+            if isinstance(self.current_engine, OllamaEngine)
+            else OllamaEngine(name="default_ollama")
+        )
         self.qa = RetrievalQA.from_chain_type(
-            llm=self.llm,
+            llm=default_llm_engine.llm,
             retriever=self.retriever,
             return_source_documents=True
         )
-        self.web_retriever = ExternalWebRetriever()
-        self.mode = mode.lower()
-        self.aws_doc_urls = aws_doc_urls or []
+
+        # Collect AWS doc URLs
+        self.aws_doc_urls = []
+        for src in engines_config.get("external_sources", []):
+            aws_urls = src.get("aws_docs", [])
+            if aws_urls:
+                self.aws_doc_urls.extend(aws_urls)
+
+    def _init_engines(self):
+        """Initialize external engines from config."""
+        for src in self.engines_config.get("external_sources", []):
+            name = src.get("name")
+            engine_type = src.get("engine")
+            api_key = src.get("api_key", None)
+
+            if engine_type == "ollama":
+                self.engine_instances[name] = OllamaEngine(name=name)
+            elif engine_type == "gemini":
+                self.engine_instances[name] = GeminiEngine(api_key)
+            elif engine_type == "serpapi":
+                self.engine_instances[name] = SerpAPIEngine(api_key)
+
+        # Set default engine
+        if self.engine_instances:
+            self.current_engine = next(iter(self.engine_instances.values()))
+        else:
+            self.current_engine = OllamaEngine(name="default_ollama")
+
+    def set_engine(self, name: str):
+        if name not in self.engine_instances:
+            raise ValueError(f"Engine '{name}' not found")
+        self.current_engine = self.engine_instances[name]
+        print(f"⚙️ Switched engine to: {name}")
 
     def set_mode(self, mode: str):
-        mode = mode.lower()
-        if mode not in ("rag", "hybrid", "external"):
+        if mode.lower() not in ("rag", "hybrid", "external"):
             raise ValueError("Mode must be one of: RAG, Hybrid, External")
-        self.mode = mode
+        self.mode = mode.lower()
         print(f"⚙️ Switched mode to: {self.mode}")
 
     def query(self, user_query: str) -> dict:
         result_text = ""
         sources = []
 
-        # ---------- INTERNAL SOP SEARCH ----------
+        seen_sources = set()  # Keep track of added sources to avoid duplicates
+
+        # --- Internal RAG search ---
         if self.mode in ("rag", "hybrid"):
             qa_result = self.qa.invoke({"query": user_query})
             result_text += qa_result["result"]
 
-            sources.extend([
-                {"source": doc.metadata.get("source"), "type": "internal"}
-                for doc in qa_result["source_documents"]
-            ])
+            for doc in qa_result["source_documents"]:
+                src_path = doc.metadata.get("source")
+                if src_path not in seen_sources:
+                    sources.append({"source": src_path, "type": "internal"})
+                    seen_sources.add(src_path)
 
-            # Deduplicate internal sources
-            seen_internal = set()
-            cleaned_sources = []
-            for entry in sources:
-                if entry["type"] == "internal":
-                    if entry["source"] not in seen_internal:
-                        cleaned_sources.append(entry)
-                        seen_internal.add(entry["source"])
-                else:
-                    cleaned_sources.append(entry)
-            sources = cleaned_sources
-
-        # ---------- EXTERNAL / HYBRID SEARCH ----------
+        # --- External / Hybrid search ---
         if self.mode in ("hybrid", "external"):
-            web_texts = self._web_search(user_query)
+            web_texts = self._fetch_external_texts(user_query)
+            for wt in web_texts:
+                url = wt["url"]
+                if url not in seen_sources:
+                    sources.append({"source": url, "type": "external"})
+                    seen_sources.add(url)
 
             if web_texts:
-                combined_text = ""
-
-                for wt in web_texts:
-                    combined_text += wt["text"] + "\n\n"
-                    sources.append({"source": wt["url"], "type": "external"})
-
-                    if self.mode == "hybrid":
-                        snippet = wt["text"][:500]
-                        result_text += f"\n\n[Web info]: {snippet}..."
-
-                if self.mode == "external" and combined_text.strip():
-                    result_text = self.llm.invoke(combined_text)
-
-            else:
-                if self.mode == "external":
-                    result_text = "⚠ No usable text found from external sources."
+                combined_text = "\n\n".join(wt["text"] for wt in web_texts)
+                result_text += "\n\n" + self.current_engine.invoke(combined_text)
 
         return {"result": result_text, "sources": sources}
 
-    def _web_search(self, query: str) -> list[dict]:
+
+    def _fetch_external_texts(self, query: str) -> list[dict[str, str]]:
         results = []
 
-        # ---------- AWS DOCS ----------
+        # --- AWS docs ---
         for url in self.aws_doc_urls:
             text = self.web_retriever.fetch_text(url)
             if text:
                 results.append({"url": url, "text": text})
 
-        # ---------- FIX 2: Wikipedia URL format corrected ----------
-        wiki_url = f"https://en.wikipedia.org/wiki/{quote_plus(query).replace('+', '_')}"
+        # --- Other configured engines ---
+        for src in self.engines_config.get("external_sources", []):
+            engine_name = src.get("name")
+            urls = src.get("urls", [])
 
-        search_sites = [
-            wiki_url,
-            f"https://stackoverflow.com/search?q={quote_plus(query)}"
-        ]
+            # Fetch URLs for this engine
+            for url in urls:
+                text = self.web_retriever.fetch_text(url)
+                if text:
+                    results.append({"url": url, "text": text})
 
-        # Fetch from sites
-        for url in search_sites:
-            text = self.web_retriever.fetch_text(url)
-            if text:
-                results.append({"url": url, "text": text})
+            # If no URLs, maybe generate dynamic search URLs depending on engine
+            if not urls:
+                if engine_name.lower() == "general-search":
+                    wiki_url = f"https://en.wikipedia.org/wiki/{quote_plus(query).replace('+','_')}"
+                    so_url = f"https://stackoverflow.com/search?q={quote_plus(query)}"
+                    for url in [wiki_url, so_url]:
+                        text = self.web_retriever.fetch_text(url)
+                        if text:
+                            results.append({"url": url, "text": text})
 
         return results
